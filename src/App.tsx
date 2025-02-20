@@ -1,23 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-
-// Bell sound implementation
-const createBellSound = () => {
-  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-  const oscillator = audioContext.createOscillator();
-  const gainNode = audioContext.createGain();
-
-  oscillator.connect(gainNode);
-  gainNode.connect(audioContext.destination);
-
-  oscillator.type = 'sine';
-  oscillator.frequency.setValueAtTime(830, audioContext.currentTime);
-  gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
-
-  oscillator.start(audioContext.currentTime);
-  oscillator.stop(audioContext.currentTime + 2);
-};
+import { createBellSound, OscillatorSettings, DEFAULT_SETTINGS } from './bellSound';
+import { OscillatorConfig } from './OscillatorConfig';
 
 interface TimeInput {
   minutes: number;
@@ -30,6 +14,7 @@ function App() {
   const [isRunning, setIsRunning] = useState(false);
   const [mode, setMode] = useState<'once' | 'continuous'>('once');
   const [progress, setProgress] = useState(100);
+  const [oscillatorSettings, setOscillatorSettings] = useState<OscillatorSettings>(DEFAULT_SETTINGS);
 
   const totalSeconds = timeLeft.minutes * 60 + timeLeft.seconds;
   const initialSeconds = inputTime.minutes * 60 + inputTime.seconds;
@@ -55,7 +40,7 @@ function App() {
         setProgress(progressValue);
       }, 1000);
     } else if (totalSeconds === 0 && isRunning) {
-      createBellSound();
+      createBellSound(oscillatorSettings);
       if (mode === 'continuous') {
         setTimeLeft({ ...inputTime });
         setProgress(100);
@@ -65,10 +50,12 @@ function App() {
     }
 
     return () => clearInterval(interval);
-  }, [isRunning, totalSeconds, mode, inputTime, initialSeconds]);
+  }, [isRunning, totalSeconds, mode, inputTime, initialSeconds, oscillatorSettings]);
 
   const handleStart = () => {
-    if (totalSeconds > 0) {
+    if (!isRunning) {
+      setTimeLeft({ ...inputTime });
+      setProgress(100);
       setIsRunning(true);
     }
   };
@@ -111,7 +98,11 @@ function App() {
             <input
               type="number"
               value={inputTime.minutes}
-              onChange={(e) => handleInputChange('minutes', parseInt(e.target.value) || 0)}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => {
+                const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                handleInputChange('minutes', value);
+              }}
               min="0"
               max="59"
             />
@@ -124,7 +115,11 @@ function App() {
             <input
               type="number"
               value={inputTime.seconds}
-              onChange={(e) => handleInputChange('seconds', parseInt(e.target.value) || 0)}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => {
+                const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                handleInputChange('seconds', value);
+              }}
               min="0"
               max="59"
             />
@@ -158,6 +153,8 @@ function App() {
             {isRunning ? 'Stop' : 'Start'}
           </button>
         </div>
+
+        <OscillatorConfig onSettingsChange={setOscillatorSettings} />
       </div>
     </div>
   );

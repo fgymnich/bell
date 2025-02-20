@@ -1,3 +1,9 @@
+#TODO:
+Add hour selector
+Add a feature to modify the oscillator to change the sound
+Add a button to test the sound
+Fix that the time selected gets saved on cache so that the display does not bug
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
