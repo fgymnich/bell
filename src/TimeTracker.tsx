@@ -1,0 +1,361 @@
+import React, { useEffect, useState } from 'react';
+
+interface TimeEntry {
+  id: string;
+  project: string;
+  task: string;
+  info: string;
+  start: string;
+  end: string;
+  durationHours: number;
+}
+
+const STORAGE_KEY = 'timeTrackerEntries';
+
+export function TimeTracker() {
+  const [project, setProject] = useState('');
+  const [task, setTask] = useState('');
+  const [info, setInfo] = useState('');
+  const [isRunning, setIsRunning] = useState(false);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [entries, setEntries] = useState<TimeEntry[]>([]);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as TimeEntry[];
+        if (Array.isArray(parsed)) {
+          setEntries(parsed);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load time entries', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    } catch (error) {
+      console.error('Failed to save time entries', error);
+    }
+  }, [entries]);
+
+  const projectOptions = Array.from(new Set(entries.map((e) => e.project).filter(Boolean))).sort();
+
+  const taskOptions = Array.from(
+    new Set(
+      entries
+        .filter((e) => !project || e.project === project)
+        .map((e) => e.task)
+        .filter(Boolean)
+    )
+  ).sort();
+
+  const infoOptions = Array.from(
+    new Set(
+      entries
+        .filter((e) => {
+          if (project && task) {
+            return e.project === project && e.task === task;
+          }
+          if (project && !task) {
+            return e.project === project;
+          }
+          return true;
+        })
+        .map((e) => e.info)
+        .filter(Boolean)
+    )
+  ).sort();
+
+  const handleSelectProjectSummary = (projectName: string) => {
+    if (!projectName) {
+      return;
+    }
+    const projectEntries = entries.filter((e) => e.project === projectName);
+    const lastEntry = projectEntries[projectEntries.length - 1];
+    setProject(projectName);
+    if (lastEntry) {
+      setTask(lastEntry.task || '');
+      setInfo(lastEntry.info || '');
+    }
+  };
+
+  const handleSelectTaskSummary = (projectName: string, taskName: string) => {
+    if (!projectName || !taskName) {
+      return;
+    }
+    const taskEntries = entries.filter(
+      (e) => e.project === projectName && e.task === taskName
+    );
+    const lastEntry = taskEntries[taskEntries.length - 1];
+    setProject(projectName);
+    setTask(taskName);
+    if (lastEntry) {
+      setInfo(lastEntry.info || '');
+    }
+  };
+
+  const handleStart = () => {
+    if (!project.trim() || !task.trim() || isRunning) {
+      return;
+    }
+    const now = Date.now();
+    setStartTime(now);
+    setIsRunning(true);
+  };
+
+  const handleStop = () => {
+    if (!isRunning || startTime === null) {
+      return;
+    }
+    const now = Date.now();
+    const durationHours = (now - startTime) / 3600000;
+
+    const newEntry: TimeEntry = {
+      id: `${now}`,
+      project: project.trim(),
+      task: task.trim(),
+      info: info.trim(),
+      start: new Date(startTime).toISOString(),
+      end: new Date(now).toISOString(),
+      durationHours,
+    };
+
+    setEntries((prev) => [...prev, newEntry]);
+    setIsRunning(false);
+    setStartTime(null);
+  };
+
+  const totalByProject = entries.reduce<Record<string, number>>((acc, entry) => {
+    acc[entry.project] = (acc[entry.project] || 0) + entry.durationHours;
+    return acc;
+  }, {});
+
+  const totalByTask = entries.reduce<Record<string, number>>((acc, entry) => {
+    const key = `${entry.project} :: ${entry.task}`;
+    acc[key] = (acc[key] || 0) + entry.durationHours;
+    return acc;
+  }, {});
+
+  const groupedSessions = entries.reduce<
+    Record<
+      string,
+      {
+        project: string;
+        task: string;
+        info: string;
+        totalHours: number;
+        count: number;
+        sessions: { start: string; end: string; durationHours: number }[];
+      }
+    >
+  >((acc, entry) => {
+    const key = `${entry.project} :: ${entry.task} :: ${entry.info}`;
+    if (!acc[key]) {
+      acc[key] = {
+        project: entry.project,
+        task: entry.task,
+        info: entry.info,
+        totalHours: 0,
+        count: 0,
+        sessions: [],
+      };
+    }
+    acc[key].totalHours += entry.durationHours;
+    acc[key].count += 1;
+    acc[key].sessions.push({
+      start: entry.start,
+      end: entry.end,
+      durationHours: entry.durationHours,
+    });
+    return acc;
+  }, {});
+
+  const formatHours = (hours: number) => {
+    return hours.toFixed(2);
+  };
+
+  return (
+    <div className="time-tracker-section">
+      <div className="tracker-inputs">
+        <div className="input-group">
+          <label>Project:</label>
+          <input
+            type="text"
+            list="project-options"
+            disabled={isRunning}
+            value={project}
+            onChange={(e) => setProject(e.target.value)}
+            placeholder="Project name"
+          />
+          <datalist id="project-options">
+            {projectOptions.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
+        </div>
+        <div className="input-group">
+          <label>Task:</label>
+          <input
+            type="text"
+            list="task-options"
+            disabled={isRunning}
+            value={task}
+            onChange={(e) => setTask(e.target.value)}
+            placeholder="Task name"
+          />
+          <datalist id="task-options">
+            {taskOptions.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
+        </div>
+        <div className="input-group">
+          <label>Info:</label>
+          <input
+            type="text"
+            list="info-options"
+            disabled={isRunning}
+            value={info}
+            onChange={(e) => setInfo(e.target.value)}
+            placeholder="Notes or details"
+          />
+          <datalist id="info-options">
+            {infoOptions.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
+        </div>
+      </div>
+
+      <div className="controls">
+        <button
+          className={`control-button ${isRunning ? 'stop' : 'start'}`}
+          onClick={isRunning ? handleStop : handleStart}
+          disabled={!isRunning && (!project.trim() || !task.trim())}
+        >
+          {isRunning ? 'Stop task' : 'Start task'}
+        </button>
+      </div>
+
+      {isRunning && startTime !== null && (
+        <div className="tracker-status">
+          Tracking since {new Date(startTime).toLocaleTimeString()}
+        </div>
+      )}
+
+      <div className="tracker-summary">
+        <h3>Hours by project</h3>
+        {Object.keys(totalByProject).length === 0 ? (
+          <p className="tracker-empty">No time recorded yet.</p>
+        ) : (
+          <ul>
+            {Object.entries(totalByProject).map(([name, hours]) => (
+              <li
+                key={name}
+                onClick={() => handleSelectProjectSummary(name)}
+                className="tracker-clickable-row"
+              >
+                <span className="tracker-name">{name}</span>
+                <span className="tracker-hours">{formatHours(hours)} h</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="tracker-summary">
+        <h3>Hours by task</h3>
+        {Object.keys(totalByTask).length === 0 ? (
+          <p className="tracker-empty">No time recorded yet.</p>
+        ) : (
+          <ul>
+            {Object.entries(totalByTask).map(([name, hours]) => {
+              const [projectName, taskName] = name.split(' :: ');
+              return (
+                <li
+                  key={name}
+                  onClick={() => handleSelectTaskSummary(projectName, taskName)}
+                  className="tracker-clickable-row"
+                >
+                  <span className="tracker-name">{name}</span>
+                <span className="tracker-hours">{formatHours(hours)} h</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      <div className="tracker-history">
+        <h3>Sessions</h3>
+        {entries.length === 0 ? (
+          <p className="tracker-empty">No sessions recorded yet.</p>
+        ) : (
+          <div className="tracker-history-list">
+            {Object.entries(groupedSessions)
+              .sort(([aKey], [bKey]) => aKey.localeCompare(bKey))
+              .map(([key, group]) => (
+                <div key={key} className="tracker-history-item">
+                  <div className="tracker-history-main">
+                    <span className="tracker-name">
+                      {group.project} — {group.task}
+                    </span>
+                    <span className="tracker-hours">
+                      {formatHours(group.totalHours)} h
+                    </span>
+                  </div>
+                  <div className="tracker-history-meta">
+                    {group.info && <span className="tracker-info">{group.info}</span>}
+                    <div className="tracker-session-count-row">
+                      <span>
+                        {group.count} session{group.count !== 1 ? 's' : ''}
+                      </span>
+                      <button
+                        type="button"
+                        className="tracker-toggle-button"
+                        onClick={() =>
+                          setExpandedGroups((prev) => ({
+                            ...prev,
+                            [key]: !prev[key],
+                          }))
+                        }
+                      >
+                        {expandedGroups[key] ? '−' : '+'}
+                      </button>
+                    </div>
+                  </div>
+                  {expandedGroups[key] && (
+                    <div className="tracker-session-details">
+                      {group.sessions
+                        .slice()
+                        .sort(
+                          (a, b) =>
+                            new Date(a.start).getTime() - new Date(b.start).getTime()
+                        )
+                        .map((session, index) => (
+                          <div key={index} className="tracker-session-detail-row">
+                            <span>
+                              {new Date(session.start).toLocaleString()} -{' '}
+                              {new Date(session.end).toLocaleString()}
+                            </span>
+                            <span className="tracker-hours">
+                              {formatHours(session.durationHours)} h
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
