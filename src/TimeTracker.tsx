@@ -86,7 +86,7 @@ export function TimeTracker() {
   ).sort();
 
   const handleSelectProjectSummary = (projectName: string) => {
-    if (!projectName) {
+    if (!projectName || isRunning) {
       return;
     }
     setProject(projectName);
@@ -95,7 +95,7 @@ export function TimeTracker() {
   };
 
   const handleSelectTaskSummary = (projectName: string, taskName: string) => {
-    if (!projectName || !taskName) {
+    if (!projectName || !taskName || isRunning) {
       return;
     }
     setProject(projectName);
@@ -228,6 +228,9 @@ export function TimeTracker() {
     task: string;
     info: string;
   }) => {
+    if (isRunning) {
+      return;
+    }
     setProject(group.project || '');
     setTask(group.task || '');
     setInfo(group.info || '');
