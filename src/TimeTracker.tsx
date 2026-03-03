@@ -287,7 +287,7 @@ export function TimeTracker() {
             exportCsv('bell-eight-time-entries.csv', header, rows);
           }}
         >
-          Export CSV
+          Export db CSV 
         </button>
       </div>
 
