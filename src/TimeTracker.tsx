@@ -89,28 +89,18 @@ export function TimeTracker() {
     if (!projectName) {
       return;
     }
-    const projectEntries = entries.filter((e) => e.project === projectName);
-    const lastEntry = projectEntries[projectEntries.length - 1];
     setProject(projectName);
-    if (lastEntry) {
-      setTask(lastEntry.task || '');
-      setInfo(lastEntry.info || '');
-    }
+    setTask('');
+    setInfo('');
   };
 
   const handleSelectTaskSummary = (projectName: string, taskName: string) => {
     if (!projectName || !taskName) {
       return;
     }
-    const taskEntries = entries.filter(
-      (e) => e.project === projectName && e.task === taskName
-    );
-    const lastEntry = taskEntries[taskEntries.length - 1];
     setProject(projectName);
     setTask(taskName);
-    if (lastEntry) {
-      setInfo(lastEntry.info || '');
-    }
+    setInfo('');
   };
 
   const handleStart = () => {
@@ -231,6 +221,16 @@ export function TimeTracker() {
 
   const formatHours = (hours: number) => {
     return hours.toFixed(2);
+  };
+
+  const handleSelectSessionGroup = (group: {
+    project: string;
+    task: string;
+    info: string;
+  }) => {
+    setProject(group.project || '');
+    setTask(group.task || '');
+    setInfo(group.info || '');
   };
 
   return (
@@ -354,7 +354,11 @@ export function TimeTracker() {
             {Object.entries(groupedSessions)
               .sort(([aKey], [bKey]) => aKey.localeCompare(bKey))
               .map(([key, group]) => (
-                <div key={key} className="tracker-history-item">
+                <div
+                  key={key}
+                  className="tracker-history-item tracker-clickable-row"
+                  onClick={() => handleSelectSessionGroup(group)}
+                >
                   <div className="tracker-history-main">
                     <span className="tracker-name">
                       {group.project} — {group.task}
@@ -372,12 +376,13 @@ export function TimeTracker() {
                       <button
                         type="button"
                         className="tracker-toggle-button"
-                        onClick={() =>
+                        onClick={(event) => {
+                          event.stopPropagation();
                           setExpandedGroups((prev) => ({
                             ...prev,
                             [key]: !prev[key],
-                          }))
-                        }
+                          }));
+                        }}
                       >
                         {expandedGroups[key] ? '−' : '+'}
                       </button>
@@ -404,7 +409,10 @@ export function TimeTracker() {
                               <button
                                 type="button"
                                 className="tracker-delete-button"
-                                onClick={() => handleDeleteSession(key, index, group)}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleDeleteSession(key, index, group);
+                                }}
                               >
                                 ✕
                               </button>
