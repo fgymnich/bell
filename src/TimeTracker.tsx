@@ -233,8 +233,64 @@ export function TimeTracker() {
     setInfo(group.info || '');
   };
 
+  const exportCsv = (filename: string, header: string[], rows: (string | number)[][]) => {
+    if (rows.length === 0) {
+      return;
+    }
+
+    const escapeCell = (value: string) => {
+      const needsQuotes = /[",\n]/.test(value);
+      const escaped = value.replace(/"/g, '""');
+      return needsQuotes ? `"${escaped}"` : escaped;
+    };
+
+    const csvLines = [
+      header.join(','),
+      ...rows.map((row) =>
+        row
+          .map((cell) => escapeCell(String(cell)))
+          .join(',')
+      ),
+    ];
+    const csvContent = csvLines.join('\r\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="time-tracker-section">
+      <div className="tracker-actions">
+        <button
+          type="button"
+          className="config-toggle"
+          onClick={() => {
+            if (entries.length === 0) {
+              return;
+            }
+            const header = ['Project', 'Task', 'Info', 'Start', 'End', 'Hours'];
+            const rows = entries.map((entry) => [
+              entry.project,
+              entry.task,
+              entry.info,
+              new Date(entry.start).toISOString(),
+              new Date(entry.end).toISOString(),
+              entry.durationHours.toFixed(4),
+            ]);
+            exportCsv('bell-eight-time-entries.csv', header, rows);
+          }}
+        >
+          Export db CSV 
+        </button>
+      </div>
+
       <div className="tracker-inputs">
         <div className="input-group">
           <label>Project:</label>
@@ -303,7 +359,25 @@ export function TimeTracker() {
       )}
 
       <div className="tracker-summary">
-        <h3>Hours by project</h3>
+        <div className="tracker-summary-header">
+          <h3>Hours by project</h3>
+          {Object.keys(totalByProject).length > 0 && (
+            <button
+              type="button"
+              className="config-toggle tracker-summary-button"
+              onClick={() => {
+                const header = ['Project', 'Total hours'];
+                const rows = Object.entries(totalByProject).map(([name, hours]) => [
+                  name,
+                  hours.toFixed(4),
+                ]);
+                exportCsv('bell-eight-hours-by-project.csv', header, rows);
+              }}
+            >
+              Export CSV
+            </button>
+          )}
+        </div>
         {Object.keys(totalByProject).length === 0 ? (
           <p className="tracker-empty">No time recorded yet.</p>
         ) : (
@@ -323,7 +397,25 @@ export function TimeTracker() {
       </div>
 
       <div className="tracker-summary">
-        <h3>Hours by task</h3>
+        <div className="tracker-summary-header">
+          <h3>Hours by task</h3>
+          {Object.keys(totalByTask).length > 0 && (
+            <button
+              type="button"
+              className="config-toggle tracker-summary-button"
+              onClick={() => {
+                const header = ['Project', 'Task', 'Total hours'];
+                const rows = Object.entries(totalByTask).map(([key, hours]) => {
+                  const [projectName, taskName] = key.split(' :: ');
+                  return [projectName, taskName, hours.toFixed(4)];
+                });
+                exportCsv('bell-eight-hours-by-task.csv', header, rows);
+              }}
+            >
+              Export CSV
+            </button>
+          )}
+        </div>
         {Object.keys(totalByTask).length === 0 ? (
           <p className="tracker-empty">No time recorded yet.</p>
         ) : (
@@ -346,7 +438,28 @@ export function TimeTracker() {
       </div>
 
       <div className="tracker-history">
-        <h3>Sessions</h3>
+        <div className="tracker-summary-header">
+          <h3>Sessions</h3>
+          {entries.length > 0 && (
+            <button
+              type="button"
+              className="config-toggle tracker-summary-button"
+              onClick={() => {
+                const header = ['Project', 'Task', 'Info', 'Sessions', 'Total hours'];
+                const rows = Object.entries(groupedSessions).map(([, group]) => [
+                  group.project,
+                  group.task,
+                  group.info,
+                  group.count,
+                  group.totalHours.toFixed(4),
+                ]);
+                exportCsv('bell-eight-sessions-summary.csv', header, rows);
+              }}
+            >
+              Export CSV
+            </button>
+          )}
+        </div>
         {entries.length === 0 ? (
           <p className="tracker-empty">No sessions recorded yet.</p>
         ) : (

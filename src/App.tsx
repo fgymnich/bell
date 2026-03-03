@@ -102,85 +102,85 @@ function App() {
           </button>
         </div>
 
-        {section === 'timer' ? (
-          <>
-            <div className="progress-ring" style={{ '--progress': `${progress}%` } as React.CSSProperties}>
-              <div className="time-display">
-                {String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
-              </div>
+        <div style={{ display: section === 'timer' ? 'block' : 'none' }}>
+          <div className="progress-ring" style={{ '--progress': `${progress}%` } as React.CSSProperties}>
+            <div className="time-display">
+              {String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
+            </div>
+          </div>
+
+          <div className="time-input">
+            <div className="input-group">
+              <label>Minutes:</label>
+              <button onClick={() => handleDecrement('minutes')}>-</button>
+              <input
+                type="number"
+                value={inputTime.minutes}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => {
+                  const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                  handleInputChange('minutes', value);
+                }}
+                min="0"
+                max="59"
+              />
+              <button onClick={() => handleIncrement('minutes')}>+</button>
             </div>
 
-            <div className="time-input">
-              <div className="input-group">
-                <label>Minutes:</label>
-                <button onClick={() => handleDecrement('minutes')}>-</button>
-                <input
-                  type="number"
-                  value={inputTime.minutes}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => {
-                    const value = e.target.value === '' ? 0 : parseInt(e.target.value);
-                    handleInputChange('minutes', value);
-                  }}
-                  min="0"
-                  max="59"
-                />
-                <button onClick={() => handleIncrement('minutes')}>+</button>
-              </div>
-
-              <div className="input-group">
-                <label>Seconds:</label>
-                <button onClick={() => handleDecrement('seconds')}>-</button>
-                <input
-                  type="number"
-                  value={inputTime.seconds}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => {
-                    const value = e.target.value === '' ? 0 : parseInt(e.target.value);
-                    handleInputChange('seconds', value);
-                  }}
-                  min="0"
-                  max="59"
-                />
-                <button onClick={() => handleIncrement('seconds')}>+</button>
-              </div>
+            <div className="input-group">
+              <label>Seconds:</label>
+              <button onClick={() => handleDecrement('seconds')}>-</button>
+              <input
+                type="number"
+                value={inputTime.seconds}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => {
+                  const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                  handleInputChange('seconds', value);
+                }}
+                min="0"
+                max="59"
+              />
+              <button onClick={() => handleIncrement('seconds')}>+</button>
             </div>
+          </div>
 
-            <div className="mode-selector">
-              <label>
-                <input
-                  type="radio"
-                  value="once"
-                  checked={mode === 'once'}
-                  onChange={(e) => setMode(e.target.value as 'once' | 'continuous')}
-                />
-                Once
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  value="continuous"
-                  checked={mode === 'continuous'}
-                  onChange={(e) => setMode(e.target.value as 'once' | 'continuous')}
-                />
-                Continuous
-              </label>
-            </div>
+          <div className="mode-selector">
+            <label>
+              <input
+                type="radio"
+                value="once"
+                checked={mode === 'once'}
+                onChange={(e) => setMode(e.target.value as 'once' | 'continuous')}
+              />
+              Once
+            </label>
+            <label>
+              <input
+                type="radio"
+                value="continuous"
+                checked={mode === 'continuous'}
+                onChange={(e) => setMode(e.target.value as 'once' | 'continuous')}
+              />
+              Continuous
+            </label>
+          </div>
 
-            <div className="controls">
-              <button
-                className={`control-button ${isRunning ? 'stop' : 'start'}`}
-                onClick={isRunning ? handleStop : handleStart}
-              >
-                {isRunning ? 'Stop' : 'Start'}
-              </button>
-            </div>
+          <div className="controls">
+            <button
+              className={`control-button ${isRunning ? 'stop' : 'start'}`}
+              onClick={isRunning ? handleStop : handleStart}
+            >
+              {isRunning ? 'Stop' : 'Start'}
+            </button>
+          </div>
 
-            <OscillatorConfig onSettingsChange={setOscillatorSettings} />
-          </>
-        ) : (
+          <OscillatorConfig onSettingsChange={setOscillatorSettings} />
+        </div>
+
+        <div style={{ display: section === 'tracker' ? 'block' : 'none' }}>
           <TimeTracker />
-        )}
+        </div>
       </div>
     </div>
   );
