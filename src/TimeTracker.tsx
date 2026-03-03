@@ -43,6 +43,20 @@ export function TimeTracker() {
     }
   }, [entries]);
 
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (isRunning) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isRunning]);
+
   const projectOptions = Array.from(new Set(entries.map((e) => e.project).filter(Boolean))).sort();
 
   const taskOptions = Array.from(
@@ -140,6 +154,46 @@ export function TimeTracker() {
     acc[key] = (acc[key] || 0) + entry.durationHours;
     return acc;
   }, {});
+
+  const handleDeleteSession = (groupKey: string, sessionIndex: number, group: {
+    project: string;
+    task: string;
+    info: string;
+    sessions: { start: string; end: string; durationHours: number }[];
+  }) => {
+    const session = group.sessions[sessionIndex];
+    if (!session) {
+      return;
+    }
+    const confirmed = window.confirm(
+      `Delete this session?\n\n` +
+      `Project: ${group.project}\nTask: ${group.task}\nInfo: ${group.info || '(none)'}\n` +
+      `From: ${new Date(session.start).toLocaleString()}\n` +
+      `To:   ${new Date(session.end).toLocaleString()}`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setEntries((prev) =>
+      prev.filter(
+        (e) =>
+          !(
+            e.project === group.project &&
+            e.task === group.task &&
+            e.info === group.info &&
+            e.start === session.start &&
+            e.end === session.end
+          )
+      )
+    );
+
+    // Keep group expanded; derived data will refresh from updated entries
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupKey]: true,
+    }));
+  };
 
   const groupedSessions = entries.reduce<
     Record<
@@ -343,9 +397,18 @@ export function TimeTracker() {
                               {new Date(session.start).toLocaleString()} -{' '}
                               {new Date(session.end).toLocaleString()}
                             </span>
-                            <span className="tracker-hours">
-                              {formatHours(session.durationHours)} h
-                            </span>
+                            <div className="tracker-session-detail-right">
+                              <span className="tracker-hours">
+                                {formatHours(session.durationHours)} h
+                              </span>
+                              <button
+                                type="button"
+                                className="tracker-delete-button"
+                                onClick={() => handleDeleteSession(key, index, group)}
+                              >
+                                ✕
+                              </button>
+                            </div>
                           </div>
                         ))}
                     </div>
