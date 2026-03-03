@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bell-eight-cache-v1';
+const CACHE_NAME = 'bell-eight-cache-v2';
 const OFFLINE_URLS = ['/', '/index.html'];
 
 self.addEventListener('install', (event) => {
